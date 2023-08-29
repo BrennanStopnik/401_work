@@ -1,5 +1,5 @@
-create database library
-use library
+-- create database library;
+use library;
 
 CREATE TABLE tbl_publisher(
 publisher_PublisherName VARCHAR(100) Primary Key,
@@ -27,7 +27,7 @@ CREATE TABLE tbl_borrower (
 	borrower_BorrowerAddress VARCHAR(200) NOT NULL,
 	borrower_BorrowerPhone VARCHAR(50) NOT NULL);
 
-Alter table tbl_borrower auto_increment =100
+Alter table tbl_borrower auto_increment =100;
 
 
 CREATE TABLE tbl_book_loans (
@@ -91,7 +91,7 @@ CREATE TABLE tbl_book_authors (
 		('Picador USA','175 Fifth Avenue, New York, NY 10010','646-307-5745')		
 	;
 
-	SELECT * FROM tbl_publisher
+	SELECT * FROM tbl_publisher;
 
 	INSERT INTO tbl_book
 		(book_Title, book_PublisherName)
@@ -117,7 +117,7 @@ CREATE TABLE tbl_book_authors (
 		('A Game of Thrones', 'Bantam'),
 		('The Lost Tribe', 'Picador USA');
 
-	#SELECT * FROM tbl_book WHERE book_PublisherName = 'George Allen & Unwin'
+	-- SELECT * FROM tbl_book WHERE book_PublisherName = 'George Allen & Unwin';
 
 	INSERT INTO tbl_library_branch
 		(library_branch_BranchName, library_branch_BranchAddress)
@@ -289,7 +289,7 @@ CREATE TABLE tbl_book_authors (
 		('19','4','5'),
 		('20','4','5');
 
-	#SELECT * FROM tbl_book_copies
+	-- SELECT * FROM tbl_book_copies
  
 
 	INSERT INTO tbl_book_authors
@@ -317,12 +317,67 @@ CREATE TABLE tbl_book_authors (
 		('20','Mark Lee');
 
 	#SELECT * FROM tbl_book_authors
-END
+
 
 /* #1- How many copies of the book titled "The Lost Tribe" are owned by the library branch whose name is "Sharpstown"? */
+
+SELECT bc.book_copies_No_Of_Copies
+FROM tbl_book b
+JOIN tbl_book_copies bc ON b.book_Title = "The Lost Tribe" AND bc.book_copies_BookID = b.book_Title
+JOIN tbl_library_branch lb ON lb.library_branch_BranchName = "Sharpstown" AND bc.book_copies_BranchID = lb.library_branch_BranchName;
+
 /* #2- How many copies of the book titled "The Lost Tribe" are owned by each library branch? */
+
+SELECT 
+    lb.library_branch_BranchName,
+    COALESCE(bc.book_copies_No_Of_Copies, 0) AS Copies
+FROM tbl_library_branch lb
+LEFT JOIN tbl_book_copies bc ON bc.book_copies_BranchID = lb.library_branch_BranchName
+LEFT JOIN tbl_book b ON b.book_Title = bc.book_copies_BookID
+WHERE b.book_Title = "The Lost Tribe"
+GROUP BY lb.library_branch_BranchName;
+
 /* #3- Retrieve the names of all borrowers who do not have any books checked out. */
+
+SELECT b.borrower_BorrowerName
+FROM tbl_borrower b
+LEFT JOIN tbl_book_loans bl ON b.borrower_BorrowerName = bl.book_loans_CardNo
+WHERE bl.book_loans_BookID IS NULL;
+
 /* #4- For each book that is loaned out from the "Sharpstown" branch and whose DueDate is today, retrieve the book title, the borrower's name, and the borrower's address.  */
+
+SELECT 
+    b.book_Title,
+    br.borrower_BorrowerName,
+    br.borrower_BorrowerAddress
+FROM tbl_book_loans bl
+JOIN tbl_book b ON bl.book_loans_BookID = b.book_Title
+JOIN tbl_borrower br ON bl.book_loans_CardNo = br.borrower_BorrowerName
+JOIN tbl_library_branch lb ON bl.book_loans_BranchID = lb.library_branch_BranchName
+WHERE lb.library_branch_BranchName = "Sharpstown"
+AND bl.book_loans_DueDate = CURDATE();
+
 /* #5- For each library branch, retrieve the branch name and the total number of books loaned out from that branch.  */
+
+SELECT lb.library_branch_BranchName AS BranchName, COUNT(bl.book_loans_BookID) AS TotalBooksLoaned
+FROM tbl_library_branch lb
+LEFT JOIN tbl_book_loans bl ON lb.library_branch_BranchID = bl.book_loans_BranchID
+GROUP BY lb.library_branch_BranchName;
+
 /* #6- Retrieve the names, addresses, and number of books checked out for all borrowers who have more than five books checked out. */
+
+SELECT b.borrower_BorrowerName AS BorrowerName, b.borrower_BorrowerAddress AS BorrowerAddress, COUNT(bl.book_loans_BookID) AS NumBooksCheckedOut
+FROM tbl_borrower b
+JOIN tbl_book_loans bl ON b.borrower_CardNo = bl.book_loans_CardNo
+GROUP BY b.borrower_BorrowerName, b.borrower_BorrowerAddress
+HAVING COUNT(bl.book_loans_BookID) > 5;
+
 /* #7- For each book authored by "Stephen King", retrieve the title and the number of copies owned by the library branch whose name is "Central".*/
+
+SELECT b.book_Title AS Title, bc.book_copies_No_Of_Copies AS NumCopiesOwned
+FROM tbl_book b
+JOIN tbl_book_authors ba ON b.book_Title = ba.book_authors_BookID
+JOIN tbl_library_branch lb ON ba.book_authors_AuthorName = 'Stephen King'
+JOIN tbl_book_copies bc ON b.book_Title = bc.book_copies_BookID AND lb.library_branch_BranchID = bc.book_copies_BranchID
+WHERE lb.library_branch_BranchName = 'Central';
+
